@@ -143,7 +143,7 @@ function getSelfPath(){
 var selfPath = getSelfPath();
 if(!selfPath || !fso.FileExists(selfPath)){ alert("无法读取程序路径，请使用完整打包目录运行！"); window.close(); }
 
-// 获取程序根目录（Inno打包根目录）
+// 获取程序根目录
 var appRoot = fso.GetParentFolderName(selfPath) + "\\";
 var clamavDir = appRoot + "ClamAV";
 var dataDir = appRoot + "TLZW_Data";
@@ -262,7 +262,7 @@ function initProgram(){
     };
 }
 
-// 创建程序本地数据目录（打包目录内，不占用系统盘）
+// 创建程序本地数据目录
 function createDirectories(){
     if(!fso.FolderExists(dataDir)) fso.CreateFolder(dataDir);
     if(!fso.FolderExists(quarantineDir)) fso.CreateFolder(quarantineDir);
@@ -304,7 +304,7 @@ function saveSettings(){
     }catch(e){}
 }
 
-// 自卫防护全套逻辑（无删减）
+// 自卫防护全套逻辑
 function startSelfProtection(){ protectSelfFile(); startAntiDebug(); startAntiInject(); }
 function protectSelfFile(){ try{ fso.GetFile(selfPath).Attributes=1+4; }catch(e){} }
 function startAntiDebug(){
@@ -362,7 +362,7 @@ function stopAllTimers(){
     if(antiInjectTimer){ clearInterval(antiInjectTimer); antiInjectTimer=null; }
 }
 
-// 后台实时防护进程（关闭主窗口仍后台运行，自动捕获病毒隔离）
+// 后台实时防护进程）
 function startRealtimeProtection(){
     stopRealtimeProcess();
     var psCmd = 'powershell -WindowStyle Hidden -Command "';
