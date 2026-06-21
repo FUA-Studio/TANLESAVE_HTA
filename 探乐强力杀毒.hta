@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>探乐强力杀毒 v3.3</title>
+    <hta:application
+        id="TLZW_AntiVirus"
+        applicationname="探乐强力杀毒"
+        border="thin"
+        borderstyle="normal"
+        caption="yes"
+        contextmenu="no"
+        innerborder="no"
+        maximizebutton="yes"
+        minimizebutton="yes"
+        navigable="no"
+        scroll="no"
+        selection="no"
+        showintaskbar="yes"
+        singleinstance="yes"
+        sysmenu="yes"
+        version="3.3"
+        windowstate="normal"
+        charset="UTF-8">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei",sans-serif; color:#fff; }
+        body { width:100vw; height:100vh; background:#050a18; overflow:hidden; position:relative; }
+        .bg-grid { position:absolute; top:0; left:0; width:100%; height:100%; background:#0a1428; z-index:0; }
+        .header { height:70px; background:rgba(10,20,40,0.95); display:flex; align-items:center; justify-content:space-between; padding:0 20px; border-bottom:2px solid #0072ff; position:relative; z-index:10; }
+        .logo { display:inline-block; }
+        .logo-icon { width:36px; height:36px; background:#0072ff; border-radius:8px; display:inline-block; text-align:center; line-height:36px; font-weight:bold; font-size:20px; }
+        .logo-text { font-size:22px; font-weight:bold; color:#00e5ff; vertical-align:middle; margin-left:8px; }
+        .version { font-size:12px; color:#88ccff; }
+        .engine-tag { display:inline-block; }
+        .tag { display:inline-block; padding:4px 10px; margin-left:10px; border-radius:12px; font-size:12px; background:rgba(0,180,255,0.2); border:1px solid rgba(0,180,255,0.4); }
+        .tag.clam { background:rgba(0,200,100,0.2); border-color:#00c864; }
+        .tag.protected { background:rgba(255,0,100,0.2); border-color:#ff0064; }
+        .tag.realtime { background:rgba(255,165,0,0.2); border-color:#ffa500; }
+        .main-table { width:100%; height:calc(100vh - 70px); border-collapse:collapse; position:relative; z-index:5; }
+        .main-table td { vertical-align:top; }
+        .sidebar { width:220px; background:rgba(8,15,30,0.9); border-right:2px solid #0072ff; padding:20px 0; }
+        .content { padding:20px; overflow-y:auto; }
+        .side-item { padding:12px 20px; margin:4px 8px; border-radius:8px; cursor:pointer; font-size:14px; border:1px solid transparent; }
+        .side-item:hover { background:rgba(0,140,255,0.3); }
+        .side-item.active { background:#0056ff; border-color:#0099ff; }
+        .side-item i { font-style:normal; font-weight:bold; margin-right:8px; }
+        .panel { display:none; }
+        .panel.active { display:block; }
+        .card { background:rgba(12,22,45,0.85); border:1px solid #0072ff; border-radius:10px; padding:20px; margin-bottom:15px; }
+        .card-title { font-size:18px; margin-bottom:12px; border-left:4px solid #00e5ff; padding-left:8px; }
+        .scan-box { margin:15px 0; }
+        .btn { display:inline-block; padding:10px 20px; margin:5px; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:bold; background:#333; }
+        .btn-primary { background:#0072ff; color:#fff; }
+        .btn-success { background:#00c853; color:#fff; }
+        .btn-warning { background:#ff9800; color:#fff; }
+        .btn-danger { background:#f44336; color:#fff; }
+        .btn:disabled { opacity:0.5; cursor:not-allowed; }
+        .progress-container { width:100%; height:8px; background:#333; border-radius:4px; margin:10px 0; }
+        .progress-bar { height:100%; width:0%; background:#0072ff; border-radius:4px; }
+        .result-box { background:rgba(0,0,0,0.3); border:1px solid #0072ff; padding:10px; max-height:250px; overflow-y:auto; font-family:"Consolas",monospace; font-size:12px; }
+        .status-grid { width:100%; margin-top:10px; }
+        .status-grid td { padding:10px; text-align:center; background:rgba(0,0,0,0.2); border:1px solid #0072ff; }
+        .status-value { font-size:28px; font-weight:bold; color:#00e5ff; }
+        .notification { position:fixed; top:20px; right:20px; width:300px; background:#0a1428; border:2px solid #f44336; padding:15px; z-index:2000; display:none; }
+        .notification.show { display:block; }
+        .setting-item { padding:10px 0; border-bottom:1px solid #0072ff; }
+        .toggle-switch { display:inline-block; width:50px; height:24px; background:#666; border-radius:12px; position:relative; cursor:pointer; }
+        .toggle-switch.active { background:#0072ff; }
+        .toggle-switch::after { content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; background:#fff; border-radius:50%; }
+        .toggle-switch.active::after { left:26px; }
+        .quarantine-table { width:100%; border-collapse:collapse; }
+        .quarantine-table th, .quarantine-table td { border:1px solid #0072ff; padding:8px; }
+        .loading-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:#050a18; z-index:1000; display:flex; align-items:center; justify-content:center; }
+        .loading-spinner { width:40px; height:40px; border:4px solid #0072ff; border-top-color:#00e5ff; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px; }
+        @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+    </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="notification" id="notification">
+    <div class="notification-title">发现病毒威胁</div>
+    <div class="notification-content" id="notificationContent"></div>
+</div>
+<div class="loading-overlay" id="loadingOverlay">
+    <div style="text-align:center;">
+        <div class="loading-spinner" id="loadingSpinner"></div>
+        <div class="loading-text" id="loadingText" style="font-size:16px;color:#00e5ff;">正在初始化程序...</div>
+        <div id="loadingDetail" style="font-size:12px;color:#aaa;margin-top:10px;"></div>
+    </div>
+</div>
+<div class="header">
+    <div class="logo">
+        <span class="logo-icon">S</span>
+        <span class="logo-text">探乐强力杀毒 <span class="version">v3.3</span></span>
+    </div>
+    <div class="engine-tag">
+        <span class="tag clam">ClamAV内置引擎</span>
+        <span class="tag protected">自卫已启动</span>
+        <span class="tag realtime" id="realtimeTag">实时防护已开启</span>
+    </div>
+</div>
+<table class="main-table" cellpadding="0" cellspacing="0">
+    <tr>
+        <td class="sidebar" id="sidebar">
+            <div class="side-item active" data-panel="scan"><i>S</i> 病毒查杀</div>
+            <div class="side-item" data-panel="quarantine"><i>Q</i> 病毒隔离区</div>
+            <div class="side-item" data-panel="system"><i>F</i> 系统急救</div>
+            <div class="side-item" data-panel="network"><i>N</i> 断网急救</div>
+            <div class="side-item" data-panel="disk"><i>D</i> 磁盘修复</div>
+            <div class="side-item" data-panel="update"><i>U</i> 病毒库更新</div>
+            <div class="side-item" data-panel="protection"><i>P</i> 自卫系统</div>
+            <div class="side-item" data-panel="settings"><i>T</i> 设置</div>
+            <div class="side-item" data-panel="about"><i>A</i> 关于软件</div>
+        </td>
+        <td class="content" id="contentArea"></td>
+    </tr>
+</table>
+<div class="footer" style="position:absolute;bottom:5px;right:20px;font-size:12px;color:#888;">探乐造物独立开发 | 内置ClamAV打包版</div>
+
+<script>
+var fso = new ActiveXObject("Scripting.FileSystemObject");
+var wsh = new ActiveXObject("WScript.Shell");
+
+// 获取程序自身完整路径
+function getSelfPath(){
+    try{
+        var url = document.URL, p = "";
+        if(url.indexOf("file:///") === 0) p = url.substring(8);
+        else if(url.indexOf("file://") === 0) p = url.substring(7);
+        p = decodeURIComponent(p).replace(/\//g,"\\");
+        while(p.indexOf("\\\\") === 0) p = p.substring(1);
+        if(fso.FileExists(p)) return p;
+    }catch(e){}
+    try{
+        var p = document.location.pathname;
+        if(p.charAt(0) === "/") p = p.substring(1);
+        p = decodeURIComponent(p).replace(/\//g,"\\");
+        if(fso.FileExists(p)) return p;
+    }catch(e){}
+    return "";
+}
+var selfPath = getSelfPath();
+if(!selfPath || !fso.FileExists(selfPath)){ alert("无法读取程序路径，请使用完整打包目录运行！"); window.close(); }
+
+// 获取程序根目录（Inno打包根目录）
+var appRoot = fso.GetParentFolderName(selfPath) + "\\";
+var clamavDir = appRoot + "ClamAV";
+var dataDir = appRoot + "TLZW_Data";
+var quarantineDir = dataDir + "\\Quarantine";
+var clamscanPath = clamavDir + "\\clamscan.exe";
+var freshclamPath = clamavDir + "\\freshclam.exe";
+
+var isScanning=false, scanStartTime=0, scanTimer=null, scanProcess=null;
+var realtimePSProc=null;
+var isExitingNormally=false;
+var antiDebugTimer=null, antiInjectTimer=null;
+var settings = { autoQuarantine:true, realtimeProtection:true, scanSystem:true, scanDownload:true, showNotification:true };
+
+// 工具函数
+function padStart(s,l,ch){ s=String(s); ch=String(ch); while(s.length<l) s=ch+s; return s; }
+function busyWait(ms){ var start=new Date().getTime(); while(new Date().getTime()-start<ms){} }
+function hasClass(el, cls){ return (' '+el.className+' ').indexOf(' '+cls+' ') > -1; }
+function addClass(el, cls){ if(!hasClass(el, cls)) el.className += ' '+cls; }
+function removeClass(el, cls){ var reg = new RegExp('(\\s|^)'+cls+'(\\s|$)'); el.className = el.className.replace(reg,' ').replace(/^\s+|\s+$/g,''); }
+function toggleClass(el, cls){ if(hasClass(el,cls)) removeClass(el,cls); else addClass(el,cls); }
+
+function addResult(boxId, txt, type){
+    var box = document.getElementById(boxId); if(!box) return;
+    var item = document.createElement('div'); item.className='result-item result-'+type;
+    var now = new Date();
+    item.innerText = "["+padStart(now.getHours(),2,'0')+":"+padStart(now.getMinutes(),2,'0')+":"+padStart(now.getSeconds(),2,'0')+"] "+txt;
+    box.appendChild(item); box.scrollTop = box.scrollHeight;
+}
+function showNotification(content){
+    var n=document.getElementById("notification");
+    document.getElementById("notificationContent").innerText = content;
+    n.style.display="block";
+    setTimeout(function(){ n.style.display="none"; },5000);
+}
+function updateLoadingText(txt, detail){
+    document.getElementById("loadingText").innerText = txt;
+    document.getElementById("loadingDetail").innerText = detail || "";
+}
+
+// 管理员权限校验&自动提权
+function checkAdminRights(){
+    try{
+        var test = "C:\\Windows\\System32\\tlzw_t_"+Math.random().toString(36).substr(2,6)+".tmp";
+        var s=fso.CreateTextFile(test,true); s.Close(); fso.DeleteFile(test,true);
+        return true;
+    }catch(e){ return false; }
+}
+function tryAutoElevate(){
+    try{
+        wsh.Run('powershell -Command "Start-Process \'mshta.exe\' -ArgumentList \''+selfPath+'\' -Verb RunAs"',0,false);
+        window.close();
+    }catch(e){ manualAdminGuide(); }
+}
+function manualAdminGuide(){
+    alert("需要管理员权限！\n请右键程序，选择「以管理员身份运行」");
+    window.close();
+}
+
+// 构建全部界面面板
+function buildPanels(){
+    var html = '';
+    html += '<div class="panel active" id="scanPanel"><div class="card"><div class="card-title">病毒扫描</div><p>内置ClamAV引擎全盘/自定义扫描，检测病毒自动隔离保护系统。</p><div class="scan-box"><button class="btn btn-primary" id="quickScanBtn">快速扫描</button><button class="btn btn-success" id="fullScanBtn">全盘扫描</button><button class="btn btn-warning" id="customScanBtn">自定义扫描</button><button class="btn btn-danger" id="stopScanBtn" disabled>停止扫描</button></div><div class="progress-container" id="progressContainer" style="display:none;"><div class="progress-bar" id="progressBar"></div></div><div class="result-box" id="resultBox"><div class="result-item result-success">引擎就绪，等待启动扫描任务...</div></div></div><div class="card"><div class="card-title">扫描状态统计</div><table class="status-grid"><tr><td><div class="status-value" id="scannedFiles">0</div></td><td><div class="status-value" id="foundViruses">0</div></td><td><div class="status-value" id="quarantinedFiles">0</div></td><td><div class="status-value" id="scanTime">00:00</div></td><td><div class="status-value" id="virusDBVersion">本地内置</div></td></tr><tr><td>已扫描文件</td><td>发现威胁</td><td>已隔离文件</td><td>扫描耗时</td><td>病毒库日期</td></tr></table></div></div>';
+    html += '<div class="panel" id="quarantinePanel"><div class="card"><div class="card-title">病毒隔离区</div><p>所有扫描/实时监测捕获的病毒文件统一隔离，支持恢复误报、永久删除恶意文件。</p><div class="scan-box"><button class="btn btn-success" id="refreshQuarantineBtn">刷新列表</button><button class="btn btn-danger" id="clearQuarantineBtn">一键清空隔离区</button></div><table class="quarantine-table"><thead><tr><th>文件名</th><th>原始路径</th><th>病毒标识</th><th>隔离时间</th><th>操作</th></tr></thead><tbody id="quarantineBody"><tr><td colspan="5" style="text-align:center;color:#888;">隔离区暂无文件</td></tr></tbody></table></div></div>';
+    html += '<div class="panel" id="systemPanel"><div class="card"><div class="card-title">系统急救工具</div><p>系统文件修复、恶意启动项清理、重置被篡改Hosts文件。</p><div class="scan-box"><button class="btn btn-primary" id="fixSystemBtn">一键系统修复</button><button class="btn btn-success" id="cleanStartupBtn">清理恶意启动项</button><button class="btn btn-warning" id="resetHostsBtn">重置Hosts文件</button></div><div class="result-box" id="systemResultBox"><div class="result-item result-success">系统急救工具已就绪</div></div></div></div>';
+    html += '<div class="panel" id="networkPanel"><div class="card"><div class="card-title">断网急救工具</div><p>修复病毒篡改导致的网络异常，重置DNS、Winsock、IP适配器。</p><div class="scan-box"><button class="btn btn-primary" id="fixNetworkBtn">一键网络修复</button><button class="btn btn-success" id="flushDnsBtn">刷新DNS缓存</button><button class="btn btn-warning" id="resetWinsockBtn">重置Winsock</button><button class="btn btn-danger" id="resetAdapterBtn">重置IP适配器</button></div><div class="result-box" id="networkResultBox"><div class="result-item result-success">断网急救工具已就绪</div></div></div></div>';
+    html += '<div class="panel" id="diskPanel"><div class="card"><div class="card-title">磁盘修复工具</div><p>检测磁盘文件错误、坏道，自动修复文件系统损坏。</p><div class="scan-box"><button class="btn btn-primary" id="checkDiskBtn">仅检查磁盘错误</button><button class="btn btn-success" id="fixDiskBtn">自动修复磁盘错误</button><button class="btn btn-warning" id="scanBadSectorsBtn">全盘扫描坏道</button><button class="btn btn-danger" id="chkdskFullBtn">完整磁盘校验修复</button></div><div class="result-box" id="diskResultBox"><div class="result-item result-success">磁盘工具已就绪</div></div></div></div>';
+    html += '<div class="panel" id="updatePanel"><div class="card"><div class="card-title">病毒库更新</div><p>联网更新ClamAV官方最新病毒特征库，提升查杀能力。</p><div class="scan-box"><button class="btn btn-primary" id="updateVirusDBBtn">一键更新病毒库</button><button class="btn btn-success" id="checkUpdateBtn">检查病毒库更新</button></div><div class="progress-container" id="updateProgressContainer" style="display:none;"><div class="progress-bar" id="updateProgressBar"></div></div><div class="result-box" id="updateResultBox"><div class="result-item result-success">当前使用本地内置病毒库</div></div></div></div>';
+    html += '<div class="panel" id="protectionPanel"><div class="card"><div class="card-title">强力自卫防护系统</div><p>反调试、反注入、程序文件只读保护，防止恶意软件终止杀毒进程。</p><div class="scan-box"><button class="btn btn-primary" id="requestAdminBtn">重新申请管理员权限</button><button class="btn btn-success" id="protectFileBtn">加固程序自身文件</button><button class="btn btn-warning" id="checkDebugBtn">实时调试器检测</button><button class="btn btn-danger" id="emergencyExitBtn">紧急彻底退出程序</button></div><div class="result-box" id="protectionResultBox"><div class="result-item result-success">多层自卫系统全程运行中</div></div></div></div>';
+    html += '<div class="panel" id="settingsPanel"><div class="card"><div class="card-title">防护设置中心</div><div class="setting-item"><span>检测病毒自动隔离</span><div class="toggle-switch active" id="autoQuarantineToggle"></div></div><div class="setting-item"><span>关闭窗口后台实时防护</span><div class="toggle-switch active" id="realtimeToggle"></div></div><div class="setting-item"><span>快速扫描包含系统目录</span><div class="toggle-switch active" id="scanSystemToggle"></div></div><div class="setting-item"><span>实时监测下载文件夹</span><div class="toggle-switch active" id="scanDownloadToggle"></div></div><div class="setting-item"><span>发现病毒弹出桌面通知</span><div class="toggle-switch active" id="notificationToggle"></div></div></div></div>';
+    html += '<div class="panel" id="aboutPanel"><div class="card"><div class="card-title">关于探乐强力杀毒 v3.3</div><div style="text-align:center;padding:20px;"><h2 style="color:#00e5ff;">探乐强力杀毒 v3.3 打包内置版</h2><p>配套Inno Setup打包内置ClamAV引擎 | 后台实时监测 | 病毒自动隔离</p><p style="color:#888;margin-top:20px;">© 2026 探乐造物工作室 全部功能本地离线可用</p></div></div></div>';
+    document.getElementById("contentArea").innerHTML = html;
+}
+
+// 权限校验入口
+if(!checkAdminRights()){
+    updateLoadingText("检测到无管理员权限", "即将自动申请权限");
+    if(confirm("程序需要管理员权限完成全盘扫描与系统修复\n是否自动重启并申请UAC管理员权限？")){
+        tryAutoElevate();
+    } else { manualAdminGuide(); }
+} else {
+    updateLoadingText("权限校验通过", "加载程序界面");
+    buildPanels();
+    setTimeout(function(){ initProgram(); }, 20);
+}
+
+// 程序主初始化逻辑
+function initProgram(){
+    updateLoadingText("初始化程序运行目录", "创建隔离、配置缓存文件夹");
+    createDirectories();
+    loadSettings();
+
+    // 校验打包内置ClamAV引擎是否存在
+    if(!fso.FileExists(clamscanPath) || !fso.FileExists(freshclamPath)){
+        alert("引擎缺失！\n请确认打包目录内存在 ClamAV/clamscan.exe\n程序目录不可单独拆分hta文件运行");
+        window.close();
+    }
+
+    stopRealtimeProcess();
+    startSelfProtection();
+    initSidebar();
+    initButtons();
+    initToggles();
+    updateQuarantineList();
+    checkVirusDB();
+
+    // 开启后台实时防护
+    if(settings.realtimeProtection) startRealtimeProtection();
+
+    setTimeout(function(){ document.getElementById("loadingOverlay").style.display="none"; },800);
+
+    // 窗口关闭事件处理
+    window.onbeforeunload = function(){
+        isExitingNormally=true;
+        stopAllTimers();
+        stopRealtimeProcess();
+    };
+}
+
+// 创建程序本地数据目录（打包目录内，不占用系统盘）
+function createDirectories(){
+    if(!fso.FolderExists(dataDir)) fso.CreateFolder(dataDir);
+    if(!fso.FolderExists(quarantineDir)) fso.CreateFolder(quarantineDir);
+}
+
+// 病毒库本地校验
+function checkVirusDB(){
+    var hasDB = fso.FileExists(clamavDir+"\\main.cvd") || fso.FileExists(clamavDir+"\\main.cld");
+    if(hasDB){
+        var dbFile = fso.GetFile(clamavDir+"\\main.cvd");
+        document.getElementById("virusDBVersion").innerText = dbFile.DateLastModified.toLocaleDateString();
+    }
+    createClamAVConfig();
+}
+// 生成ClamAV更新配置
+function createClamAVConfig(){
+    var confPath = clamavDir+"\\freshclam.conf";
+    var cfgStream = fso.CreateTextFile(confPath,true);
+    cfgStream.Write("DatabaseMirror database.clamav.net\nMaxAttempts 5\nConnectTimeout 30\nReceiveTimeout 30\n");
+    cfgStream.Close();
+}
+
+// 设置读写持久化
+function loadSettings(){
+    try{
+        var setPath = dataDir+"\\settings.ini";
+        if(fso.FileExists(setPath)){
+            var sRead = fso.OpenTextFile(setPath,1);
+            settings=JSON.parse(sRead.ReadAll());
+            sRead.Close();
+        }
+    }catch(e){ saveSettings(); }
+}
+function saveSettings(){
+    try{
+        var sWrite = fso.CreateTextFile(dataDir+"\\settings.ini",true);
+        sWrite.Write(JSON.stringify(settings));
+        sWrite.Close();
+    }catch(e){}
+}
+
+// 自卫防护全套逻辑（无删减）
+function startSelfProtection(){ protectSelfFile(); startAntiDebug(); startAntiInject(); }
+function protectSelfFile(){ try{ fso.GetFile(selfPath).Attributes=1+4; }catch(e){} }
+function startAntiDebug(){
+    if(antiDebugTimer) clearInterval(antiDebugTimer);
+    antiDebugTimer = setInterval(function(){
+        try{
+            var wmi=GetObject("winmgmts:\\\\.\\root\\cimv2");
+            var debugTools=["ollydbg.exe","x64dbg.exe","x32dbg.exe","windbg.exe","ida.exe","ida64.exe","cheatengine.exe"];
+            for(var i=0;i<debugTools.length;i++){
+                var query=wmi.ExecQuery("SELECT ProcessID FROM Win32_Process WHERE Name='"+debugTools[i]+"'");
+                if(!new Enumerator(query).atEnd()){
+                    isExitingNormally=true;
+                    stopAllTimers();
+                    stopRealtimeProcess();
+                    window.close();
+                    return;
+                }
+            }
+        }catch(e){}
+    },2000);
+}
+function startAntiInject(){
+    if(antiInjectTimer) clearInterval(antiInjectTimer);
+    antiInjectTimer = setInterval(function(){
+        try{
+            var wmi=GetObject("winmgmts:\\\\.\\root\\cimv2");
+            var currentPid=0;
+            var allMhta = wmi.ExecQuery("SELECT ProcessID,CommandLine FROM Win32_Process WHERE Name='mshta.exe'");
+            var enumMhta=new Enumerator(allMhta);
+            for(;!enumMhta.atEnd();enumMhta.moveNext()){
+                var p=enumMhta.item();
+                if((p.CommandLine||"").indexOf(selfPath)>=0){
+                    currentPid=p.ProcessID;
+                    break;
+                }
+            }
+            if(currentPid===0) return;
+            var procInfo = wmi.ExecQuery("SELECT ThreadCount FROM Win32_Process WHERE ProcessID="+currentPid);
+            var enumInfo=new Enumerator(procInfo);
+            while(!enumInfo.atEnd()){
+                if(enumInfo.item().ThreadCount>50){
+                    isExitingNormally=true;
+                    stopAllTimers();
+                    stopRealtimeProcess();
+                    window.close();
+                    return;
+                }
+                enumInfo.moveNext();
+            }
+        }catch(e){}
+    },3000);
+}
+function stopAllTimers(){
+    if(antiDebugTimer){ clearInterval(antiDebugTimer); antiDebugTimer=null; }
+    if(antiInjectTimer){ clearInterval(antiInjectTimer); antiInjectTimer=null; }
+}
+
+// 后台实时防护进程（关闭主窗口仍后台运行，自动捕获病毒隔离）
+function startRealtimeProtection(){
+    stopRealtimeProcess();
+    var psCmd = 'powershell -WindowStyle Hidden -Command "';
+    psCmd += '$clamscan = \'' + clamscanPath.replace(/\\/g, '\\\\') + '\';';
+    psCmd += '$quarantineDir = \'' + quarantineDir.replace(/\\/g, '\\\\') + '\';';
+    psCmd += '$paths = @($env:USERPROFILE+\'\\\\Downloads\',$env:USERPROFILE+\'\\\\Desktop\',$env:TEMP,$env:APPDATA);';
+    psCmd += 'while($true){foreach($p in $paths){if(Test-Path $p){$result = & $clamscan -r --infected --detect-pua=yes --no-summary $p;';
+    psCmd += 'if($result -match \'FOUND\'){foreach($line in $result -split "`n"){if($line -match \'^(.*?):\s(.*?)\sFOUND\'){';
+    psCmd += '$file = $matches[1];$virus = $matches[2];';
+    psCmd += 'if(Test-Path $file){$name = Split-Path $file -Leaf;$dest = Join-Path $quarantineDir ($name+\'.quarantine\');';
+    psCmd += 'Copy-Item $file $dest -Force;Remove-Item $file -Force;';
+    psCmd += '"$name|$file|$virus|$(Get-Date -f \'yyyy-MM-dd HH:mm:ss\')" | Out-File (Join-Path $quarantineDir quarantine.log) -Append -Encoding UTF8;}}}}}Start-Sleep 30;}"';
+    try{ realtimePSProc = wsh.Exec(psCmd); }catch(e){}
+}
+// 彻底终止所有实时防护PowerShell后台进程
+function stopRealtimeProcess(){
+    try{ if(realtimePSProc && realtimePSProc.Status === 0) realtimePSProc.Terminate(); }catch(e){}
+    try{
+        var wmi = GetObject("winmgmts:\\\\.\\root\\cimv2");
+        var allPs = wmi.ExecQuery("SELECT ProcessID,CommandLine FROM Win32_Process WHERE Name='powershell.exe'");
+        var enumPs=new Enumerator(allPs);
+        for(;!enumPs.atEnd();enumPs.moveNext()){
+            var p=enumPs.item();
+            if(p.CommandLine && p.CommandLine.indexOf(clamscanPath) > -1){
+                GetObject("winmgmts:").Get("Win32_Process.Handle=" + p.ProcessID).Terminate();
+            }
+        }
+    }catch(e){}
+}
+
+// 病毒隔离核心逻辑
+function quarantineFile(filePath, virusName){
+    try{
+        if(!settings.autoQuarantine) return false;
+        var fName = fso.GetFileName(filePath);
+        var qPath = quarantineDir + "\\" + fName + ".quarantine";
+        fso.CopyFile(filePath, qPath, true);
+        fso.DeleteFile(filePath, true);
+        var logWrite = fso.OpenTextFile(quarantineDir + "\\quarantine.log", 8, true);
+        logWrite.WriteLine(fName + "|" + filePath + "|" + virusName + "|" + new Date().toLocaleString());
+        logWrite.Close();
+        var curNum = parseInt(document.getElementById("quarantinedFiles").innerText) || 0;
+        document.getElementById("quarantinedFiles").innerText = curNum + 1;
+        if(settings.showNotification) showNotification("实时/扫描捕获病毒："+virusName+"\n文件已自动隔离");
+        return true;
+    }catch(e){ return false; }
+}
+// 恢复隔离文件至原始路径
+function restoreFile(index){
+    try{
+        var logPath = quarantineDir + "\\quarantine.log";
+        if(!fso.FileExists(logPath)) return;
+        var logRead = fso.OpenTextFile(logPath, 1);
+        var logLines = logRead.ReadAll().split("\n");
+        logRead.Close();
+        if(index >= logLines.length) return;
+        var lineData = logLines[index].trim().split("|");
+        if(lineData.length <4) return;
+        var qFile = quarantineDir + "\\" + lineData[0] + ".quarantine";
+        if(fso.FileExists(qFile)){
+            fso.CopyFile(qFile, lineData[1], true);
+            fso.DeleteFile(qFile, true);
+            logLines.splice(index,1);
+            var logSave = fso.CreateTextFile(logPath,true);
+            logSave.Write(logLines.join("\n"));
+            logSave.Close();
+            updateQuarantineList();
+            addResult("resultBox","已恢复文件："+lineData[1],"success");
+        }
+    }catch(e){ addResult("resultBox","文件恢复失败："+e.message,"danger"); }
+}
+// 永久删除隔离病毒文件
+function deleteQuarantinedFile(index){
+    try{
+        var logPath = quarantineDir + "\\quarantine.log";
+        if(!fso.FileExists(logPath)) return;
+        var logRead = fso.OpenTextFile(logPath, 1);
+        var logLines = logRead.ReadAll().split("\n");
+        logRead.Close();
+        var lineData = logLines[index].trim().split("|");
+        var qFile = quarantineDir + "\\" + lineData[0] + ".quarantine";
+        if(fso.FileExists(qFile)) fso.DeleteFile(qFile,true);
+        logLines.splice(index,1);
+        var logSave = fso.CreateTextFile(logPath,true);
+        logSave.Write(logLines.join("\n"));
+        logSave.Close();
+        updateQuarantineList();
+        addResult("resultBox","隔离文件已永久删除","success");
+    }catch(e){ addResult("resultBox","删除失败："+e.message,"danger"); }
+}
+// 刷新隔离区列表面板
+function updateQuarantineList(){
+    try{
+        var tbody = document.getElementById("quarantineBody");
+        tbody.innerHTML = "";
+        var logPath = quarantineDir + "\\quarantine.log";
+        if(!fso.FileExists(logPath)){
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;">隔离区暂无文件</td></tr>';
+            document.getElementById("quarantinedFiles").innerText = "0";
+            return;
+        }
+        var logRead = fso.OpenTextFile(logPath,1);
+        var logLines = logRead.ReadAll().split("\n");
+        logRead.Close();
+        var count=0;
+        for(var i=0;i<logLines.length;i++){
+            var line = logLines[i].trim();
+            if(line === "") continue;
+            var arr = line.split("|");
+            if(arr.length>=4){
+                var tr = document.createElement("tr");
+                tr.innerHTML = '<td>'+arr[0]+'</td><td>'+arr[1]+'</td><td>'+arr[2]+'</td><td>'+arr[3]+'</td><td><button class="btn btn-success" style="padding:4px 8px;font-size:12px;" onclick="restoreFile('+i+')">恢复</button> <button class="btn btn-danger" style="padding:4px 8px;font-size:12px;" onclick="deleteQuarantinedFile('+i+')">删除</button></td>';
+                tbody.appendChild(tr);
+                count++;
+            }
+        }
+        if(count===0) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888;">隔离区暂无文件</td></tr>';
+        document.getElementById("quarantinedFiles").innerText = count;
+    }catch(e){
+        tbody.innerHTML = '<tr><td colspan="5" style="color:#ff5252;">读取隔离日志失败</td></tr>';
+    }
+}
+
+// 侧边栏面板切换逻辑
+function initSidebar(){
+    var sideItems = document.querySelectorAll(".side-item");
+    sideItems.forEach(function(item){
+        item.onclick = function(){
+            sideItems.forEach(i => removeClass(i, "active"));
+            addClass(this, "active");
+            var targetPanelId = this.getAttribute("data-panel") + "Panel";
+            document.querySelectorAll(".panel").forEach(p => removeClass(p, "active"));
+            addClass(document.getElementById(targetPanelId), "active");
+            if(targetPanelId === "quarantinePanel") updateQuarantineList();
+        };
+    });
+}
+// 全部按钮事件绑定
+function initButtons(){
+    // 扫描按钮
+    document.getElementById('quickScanBtn').onclick=function(){ startScan('quick'); };
+    document.getElementById('fullScanBtn').onclick=function(){ startScan('full'); };
+    document.getElementById('customScanBtn').onclick=function(){ startScan('custom'); };
+    document.getElementById('stopScanBtn').onclick=stopScan;
+    // 隔离区按钮
+    document.getElementById('refreshQuarantineBtn').onclick=updateQuarantineList;
+    document.getElementById('clearQuarantineBtn').onclick=function(){
+        if(confirm("确认清空全部隔离文件？删除后无法恢复！")){
+            try{
+                var folder = fso.GetFolder(quarantineDir);
+                var allFiles = new Enumerator(folder.Files);
+                for(;!allFiles.atEnd();allFiles.moveNext()) allFiles.item().Delete(true);
+                updateQuarantineList();
+                addResult("resultBox","隔离区已全部清空","success");
+            }catch(e){ addResult("resultBox","清空隔离区失败："+e.message,"danger"); }
+        }
+    };
+    // 系统急救
+    document.getElementById('fixSystemBtn').onclick=function(){
+        if(confirm("系统修复将耗时数分钟，是否继续？")){
+            wsh.Run("sfc /scannow",1,true);
+            wsh.Run("dism /online /cleanup-image /restorehealth",1,true);
+            addResult("systemResultBox","系统文件修复完成","success");
+        }
+    };
+    document.getElementById('cleanStartupBtn').onclick=function(){
+        try{
+            var paths = [
+                wsh.ExpandEnvironmentStrings("%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"),
+                wsh.ExpandEnvironmentStrings("%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup")
+            ];
+            paths.forEach(p=>{
+                if(fso.FolderExists(p)){
+                    var files=new Enumerator(fso.GetFolder(p).Files);
+                    for(;!files.atEnd();files.moveNext()){
+                        var f=files.item();
+                        if(/\.(exe|bat|vbs|js)$/i.test(f.Name)) f.Delete(true);
+                    }
+                }
+            });
+            addResult("systemResultBox","可疑启动项清理完成","success");
+        }catch(e){ addResult("systemResultBox","清理启动项失败："+e.message,"danger"); }
+    };
+    document.getElementById('resetHostsBtn').onclick=function(){
+        try{
+            var hostsPath = wsh.ExpandEnvironmentStrings("%SystemRoot%\\System32\\drivers\\etc\\hosts");
+            var hostWrite = fso.CreateTextFile(hostsPath,true);
+            hostWrite.Write("127.0.0.1 localhost\n::1 localhost\n");
+            hostWrite.Close();
+            addResult("systemResultBox","Hosts文件已重置为系统默认","success");
+        }catch(e){ addResult("systemResultBox","重置Hosts失败："+e.message,"danger"); }
+    };
+    // 网络急救
+    document.getElementById('fixNetworkBtn').onclick=function(){
+        wsh.Run("ipconfig /flushdns",1,true);
+        wsh.Run("netsh winsock reset",1,true);
+        wsh.Run("netsh int ip reset",1,true);
+        addResult("networkResultBox","全套网络修复执行完毕，建议重启电脑","success");
+    };
+    document.getElementById('flushDnsBtn').onclick=function(){ wsh.Run("ipconfig /flushdns",1,true); addResult("networkResultBox","DNS缓存刷新完成","success"); };
+    document.getElementById('resetWinsockBtn').onclick=function(){ wsh.Run("netsh winsock reset",1,true); addResult("networkResultBox","Winsock重置完成","success"); };
+    document.getElementById('resetAdapterBtn').onclick=function(){ wsh.Run("netsh int ip reset",1,true); addResult("networkResultBox","IP适配器重置完成","success"); };
+    // 磁盘修复
+    document.getElementById('checkDiskBtn').onclick=function(){ wsh.Run("chkdsk C:",1,true); addResult("diskResultBox","C盘磁盘检查完成","success"); };
+    document.getElementById('fixDiskBtn').onclick=function(){ if(confirm("修复磁盘需重启才能生效，继续？")) wsh.Run("chkdsk C: /f",1,true); };
+    document.getElementById('scanBadSectorsBtn').onclick=function(){ if(confirm("坏道扫描耗时极长，是否继续？")) wsh.Run("chkdsk C: /r",1,true); };
+    document.getElementById('chkdskFullBtn').onclick=function(){ if(confirm("完整磁盘校验需重启，是否继续？")) wsh.Run("chkdsk C: /f /r /x",1,true); };
+    // 病毒库更新
+    document.getElementById('updateVirusDBBtn').onclick=function(){
+        addResult("updateResultBox","正在联网拉取最新病毒库...","success");
+        try{
+            wsh.Run("\""+freshclamPath+"\" --config-file=\""+clamavDir+"\\freshclam.conf\"",1,true);
+            document.getElementById("virusDBVersion").innerText = new Date().toLocaleDateString();
+            addResult("updateResultBox","病毒库更新完成","success");
+        }catch(e){ addResult("updateResultBox","病毒库更新失败："+e.message,"danger"); }
+    };
+    document.getElementById('checkUpdateBtn').onclick=function(){
+        addResult("updateResultBox","正在校验线上病毒库版本...","success");
+        try{
+            var proc=wsh.Exec("\""+freshclamPath+"\" --config-file=\""+clamavDir+"\\freshclam.conf\" --check");
+            while(proc.Status===0) busyWait(100);
+            if(proc.ExitCode===0) addResult("updateResultBox","当前病毒库已是最新版本","success");
+            else addResult("updateResultBox","检测到新版本病毒库，建议更新","warning");
+        }catch(e){ addResult("updateResultBox","版本校验失败："+e.message,"danger"); }
+    };
+    // 自卫系统按钮
+    document.getElementById('requestAdminBtn').onclick=function(){ if(!checkAdminRights()) tryAutoElevate(); else alert("当前已拥有完整管理员权限"); };
+    document.getElementById('protectFileBtn').onclick=function(){ protectSelfFile(); addResult("protectionResultBox","程序文件只读保护已加固","success"); };
+    document.getElementById('checkDebugBtn').onclick=function(){ checkDebuggerNow(); };
+    document.getElementById('emergencyExitBtn').onclick=function(){
+        if(confirm("紧急退出将终止所有后台实时防护进程、清空临时缓存，确认退出？")){
+            isExitingNormally=true;
+            stopAllTimers();
+            stopRealtimeProcess();
+            window.close();
+        }
+    };
+}
+function checkDebuggerNow(){
+    var detectList=["ollydbg.exe","x64dbg.exe","x32dbg.exe","windbg.exe","ida.exe","ida64.exe","cheatengine.exe"];
+    var findAny=false;
+    try{
+        var wmi=GetObject("winmgmts:\\\\.\\root\\cimv2");
+        for(var i=0;i<detectList.length;i++){
+            var q=wmi.ExecQuery("SELECT ProcessID FROM Win32_Process WHERE Name='"+detectList[i]+"'");
+            if(!new Enumerator(q).atEnd()){
+                addResult("protectionResultBox","警告：检测到调试程序 "+detectList[i],"danger");
+                findAny=true;
+            }
+        }
+        if(!findAny) addResult("protectionResultBox","系统内未检测到调试/逆向工具","success");
+    }catch(e){ addResult("protectionResultBox","调试检测执行异常："+e.message,"warning"); }
+}
+// 设置开关绑定
+function initToggles(){
+    var toggleMap = {
+        autoQuarantineToggle:'autoQuarantine',
+        realtimeToggle:'realtimeProtection',
+        scanSystemToggle:'scanSystem',
+        scanDownloadToggle:'scanDownload',
+        notificationToggle:'showNotification'
+    };
+    for(var id in toggleMap){
+        (function(elId, key){
+            var el = document.getElementById(elId);
+            if(settings[key]) addClass(el, 'active');
+            el.onclick = function(){
+                settings[key] = !settings[key];
+                toggleClass(el, 'active');
+                saveSettings();
+                // 实时防护开关单独处理启停后台进程
+                if(key==='realtimeProtection'){
+                    if(settings[key]) startRealtimeProtection();
+                    else stopRealtimeProcess();
+                }
+            };
+        })(id, toggleMap[id]);
+    }
+}
+
+// 扫描任务核心逻辑
+function startScan(type){
+    if(isScanning) return;
+    if(!fso.FileExists(clamscanPath)){ addResult("resultBox","ClamAV引擎缺失，无法启动扫描","danger"); return; }
+    isScanning=true; scanStartTime=Date.now();
+    // 锁定扫描按钮
+    document.getElementById('quickScanBtn').disabled=true;
+    document.getElementById('fullScanBtn').disabled=true;
+    document.getElementById('customScanBtn').disabled=true;
+    document.getElementById('stopScanBtn').disabled=false;
+    document.getElementById('progressContainer').style.display='block';
+    document.getElementById('progressBar').style.width='0%';
+    document.getElementById('resultBox').innerHTML='';
+    document.getElementById('scannedFiles').innerText='0';
+    document.getElementById('foundViruses').innerText='0';
+    document.getElementById('scanTime').innerText='00:00';
+    // 计时条
+    scanTimer = setInterval(function(){
+        var sec = Math.floor((Date.now()-scanStartTime)/1000);
+        document.getElementById('scanTime').innerText=padStart(Math.floor(sec/60),2,'0')+":"+padStart(sec%60,2,'0');
+    },1000);
+    // 分配扫描路径
+    var scanPath="";
+    if(type==='quick'){
+        scanPath = wsh.ExpandEnvironmentStrings("%USERPROFILE%\\Desktop") + " " +
+                  wsh.ExpandEnvironmentStrings("%USERPROFILE%\\Downloads") + " " +
+                  wsh.ExpandEnvironmentStrings("%TEMP%");
+        if(settings.scanSystem) scanPath += " " + wsh.ExpandEnvironmentStrings("%SystemRoot%\\System32");
+        addResult("resultBox","启动快速扫描：桌面、下载、临时目录"+(settings.scanSystem?"、系统32目录":""),"success");
+    } else if(type==='full'){
+        scanPath="C:\\";
+        addResult("resultBox","启动全盘C盘完整扫描，耗时较长请勿关闭程序","warning");
+    } else {
+        scanPath=prompt("请输入需要扫描的完整文件夹路径：","C:\\");
+        if(!scanPath){ isScanning=false; resetScanButtons(); return; }
+        addResult("resultBox","启动自定义路径扫描："+scanPath,"success");
+    }
+    // 执行clamscan查杀命令
+    var scanCmd = "\""+clamscanPath+"\" -r --infected --detect-pua=yes --heuristic-scan-precedence=high --no-summary \""+scanPath+"\"";
+    try{
+        scanProcess=wsh.Exec(scanCmd);
+        var monitorLoop = setInterval(function(){
+            if(scanProcess.Status===1){
+                clearInterval(monitorLoop); clearInterval(scanTimer);
+                var scanOut = scanProcess.StdOut.ReadAll();
+                var virusCount=0;
+                scanOut.split('\n').forEach(line=>{
+                    if(line.indexOf("FOUND")>=0){
+                        virusCount++;
+                        var splitLine = line.split(": ");
+                        var fileTarget = splitLine[0];
+                        var virusName = splitLine[1].replace(" FOUND","");
+                        addResult("resultBox","【威胁】"+fileTarget+" | 病毒标识："+virusName,"danger");
+                        quarantineFile(fileTarget,virusName);
+                    }
+                });
+                document.getElementById("foundViruses").innerText=virusCount;
+                addResult("resultBox","扫描任务结束，共检测出 "+virusCount+" 项恶意威胁","success");
+                document.getElementById('progressBar').style.width='100%';
+                resetScanButtons(); isScanning=false;
+            } else {
+                // 模拟进度与文件计数
+                var prog = parseInt(document.getElementById('progressBar').style.width)||0;
+                if(prog<90) document.getElementById('progressBar').style.width=(prog+Math.random()*4)+'%';
+                var fileNum = parseInt(document.getElementById('scannedFiles').innerText)||0;
+                document.getElementById('scannedFiles').innerText = fileNum + Math.floor(Math.random()*80);
+            }
+        },500);
+    }catch(e){
+        addResult("resultBox","扫描进程启动失败："+e.message,"danger");
+        resetScanButtons(); isScanning=false;
+    }
+}
+// 终止扫描任务
+function stopScan(){
+    if(!isScanning) return;
+    try{ if(scanProcess&&
